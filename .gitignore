@@ -1,0 +1,65 @@
+# Python virtual environments
+
+.venv/
+venv/
+
+# Python cache
+
+**pycache**/
+*.py[cod]
+*.pyo
+
+# Test cache and coverage
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment secrets
+
+.env
+.env.*
+!.env.example
+
+# Logs
+
+logs/
+*.log
+
+# IDE and operating system files
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Generated vector database
+
+vector_db/
+
+# Local documents and downloaded documentation
+
+documents/
+
+# Archived project snapshots
+
+archive/
+
+# Local model caches
+
+.cache/
+.cache/huggingface/
+
+# Temporary files and backups
+
+*.tmp
+*.swp
+*.backup
+

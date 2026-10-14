@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+
+.git/
+.gitignore
+
+archive/
+
+*.tar.gz
+
+.cache/
+.huggingface/
+
+vector_db/
+documents/
+
+# Environment files
+.env
+.env.*
+!.env.example

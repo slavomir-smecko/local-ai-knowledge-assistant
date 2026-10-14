@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Research Assistant</title>
+
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+
+<div class="app">
+
+
+    <header>
+
+
+        <div class="title">
+
+
+            <div>
+
+                <h1>
+                    AI Research Assistant
+                </h1>
+
+
+                <p>
+                    Local RAG • n8n • FastAPI • Ollama • Chroma
+                </p>
+
+
+            </div>
+
+
+        </div>
+
+
+        <div class="status" id="status">
+
+            ● Ready
+
+        </div>
+
+
+    </header>
+
+
+
+
+    <main id="chat">
+
+
+        <div class="message assistant">
+
+
+            <div class="avatar assistant-avatar">
+
+                AI
+
+            </div>
+
+
+            <div class="bubble">
+
+                Hello! I am your AI Research Assistant.
+                Ask me anything about your knowledge base.
+
+            </div>
+
+
+        </div>
+
+
+    </main>
+
+
+
+
+    <footer>
+
+
+        <textarea
+            id="question"
+            placeholder="Ask anything about your knowledge base..."
+        ></textarea>
+
+
+
+        <div class="actions">
+
+
+            <button id="askButton">
+
+                Ask Question
+
+            </button>
+
+
+        </div>
+
+
+    </footer>
+
+
+
+</div>
+
+
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+
+</body>
+
+</html>

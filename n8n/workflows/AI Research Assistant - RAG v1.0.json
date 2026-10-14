@@ -1,0 +1,868 @@
+{
+  "name": "AI Research Assistant - RAG v0.5",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://rag-api:8000/ask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  question: $json.question,\n  history: $json.history\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        192,
+        224
+      ],
+      "id": "5dc96530-9cb8-49bd-aab6-e3f3697b7efb",
+      "name": "HTTP Request",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2208,
+        -32
+      ],
+      "id": "af681f9a-4fd6-4ed9-a2a7-228c893b8bdc",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rag",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -928,
+        272
+      ],
+      "id": "c1d2fbfe-791f-45f5-8e14-d64d59823101",
+      "name": "Webhook",
+      "webhookId": "51a64450-8ad9-410d-9f28-bbc63c47c501"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\n\nconst sessionId = body.session_id;\nconst question = body.question;\n\nconst executionId = $execution.id;\nconst startTime = Date.now();\n\n\n// Validate session_id\nif (!sessionId) {\n  return [\n    {\n      json: {\n        execution_id: executionId,\n        session_id: null,\n        start_time: startTime,\n        error: true,\n        status: 400,\n        message: \"Missing session_id\"\n      }\n    }\n  ];\n}\n\n\n// Validate question\nif (!question || question.trim().length < 3) {\n  return [\n    {\n      json: {\n        execution_id: executionId,\n        session_id: sessionId,\n        start_time: startTime,\n        error: true,\n        status: 400,\n        message: \"Question is empty or too short\"\n      }\n    }\n  ];\n}\n\n\n// Limit question size\nif (question.length > 2000) {\n  return [\n    {\n      json: {\n        execution_id: executionId,\n        session_id: sessionId,\n        start_time: startTime,\n        error: true,\n        status: 400,\n        message: \"Question exceeds maximum length\"\n      }\n    }\n  ];\n}\n\n\n// Valid request\nreturn [\n  {\n    json: {\n      execution_id: executionId,\n      session_id: sessionId,\n      question: question.trim(),\n      start_time: startTime,\n      error: false\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        608
+      ],
+      "id": "d54af3bc-aadc-4958-b922-a0d585798105",
+      "name": "Validate Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a4fc9be8-d1ee-4dbc-98dd-024902c3d722",
+              "leftValue": "={{$json.error}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        224
+      ],
+      "id": "2070017c-8a45-4621-96ae-79f94d2df848",
+      "name": "Validate Success?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      status: \"error\",\n      message: $json.message,\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        800
+      ],
+      "id": "4cb32d54-c2e1-4708-ac80-5098df97c10a",
+      "name": "Format Error Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cea43805-d876-44e6-a111-89f64325146f",
+              "leftValue": "={{$json.answer}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        224
+      ],
+      "id": "7f67c25e-205c-42bb-b444-09d465022bc3",
+      "name": "Check AI Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      status: \"error\",\n      message: \"AI service did not return an answer\",\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        608
+      ],
+      "id": "9421cd0c-aafe-4c7e-8004-4825410ca949",
+      "name": "Format AI Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "const latency = Date.now() - $json.start_time;\n\nreturn [\n  {\n    json: {\n      execution_id: $json.execution_id,\n      session_id: $json.session_id,\n      latency_ms: latency\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        992
+      ],
+      "id": "ea750491-0f32-4b1f-b575-7113978aedb8",
+      "name": "Calculate Latency"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "3HdbS7092x9DSyou",
+          "mode": "list",
+          "cachedResultName": "chat_memory",
+          "cachedResultUrl": "/projects/LPILM4i7RtuLsk0w/datatables/3HdbS7092x9DSyou"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{$now.toISO()}}",
+            "answer": "={{$('HTTP Request').item.json.answer}}",
+            "session_id": "={{ $('Validate Request').item.json.session_id }}",
+            "question": "={{ $('Validate Request').item.json.question }}",
+            "sources": "={{ JSON.stringify($('HTTP Request').item.json.sources) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "question",
+              "displayName": "question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "answer",
+              "displayName": "answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sources",
+              "displayName": "sources",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        224
+      ],
+      "id": "3d95da4e-4a58-4f54-b3e4-da7650072ed3",
+      "name": "Insert row Memory table",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "VITGGGBGNV49mBzE",
+          "mode": "list",
+          "cachedResultName": "rag_execution_logs",
+          "cachedResultUrl": "/projects/LPILM4i7RtuLsk0w/datatables/VITGGGBGNV49mBzE"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{$json.session_id}}",
+            "timestamp": "={{$json.timestamp}}",
+            "latency_ms": "={{$json.latency_ms}}",
+            "error_message": "={{$json.error_message}}",
+            "webhook": "={{$json.webhook}}",
+            "validation": "={{$json.validation}}",
+            "rag_api": "={{$json.rag_api}}",
+            "memory_table_insertion": "={{$json.memory_table_insertion}}",
+            "execution_id": "={{$json.execution_id}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "webhook",
+              "displayName": "webhook",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "validation",
+              "displayName": "validation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "rag_api",
+              "displayName": "rag_api",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "memory_table_insertion",
+              "displayName": "memory_table_insertion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "latency_ms",
+              "displayName": "latency_ms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "optimizeBulk": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        -160
+      ],
+      "id": "36970b10-8033-4d2c-bd7e-436bb1e047e2",
+      "name": "Insert row Execution Logs",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n \"component\":\"rag-api\",\n \"status\":\"success\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -64
+      ],
+      "id": "d0dcf339-ac14-42cb-b914-1c849862b61b",
+      "name": "Success log rag-api"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n \"component\":\"webhook\",\n \"status\":\"success\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -448
+      ],
+      "id": "16cfe02c-a6c4-45e4-a52b-a6440a41fa1e",
+      "name": "Success log webhook"
+    },
+    {
+      "parameters": {
+        "numberInputs": 8
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1088,
+        -256
+      ],
+      "id": "80b8c853-4e11-46f2-90d0-23b8693330ca",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n \"component\":\"memory table insertion\",\n \"status\":\"success\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        224
+      ],
+      "id": "80f6fc68-53e7-425a-8bdc-e00a263f0d2e",
+      "name": "Success log Memory table insertion"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n \"component\":\"validation\",\n \"status\":\"success\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -256
+      ],
+      "id": "88c586a0-4578-4012-a702-7f12817c9c1c",
+      "name": "Success log validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the original question from Webhook\nconst question = $('Webhook').first().json.body.question;\n\n// Get previous rows from Data Table\nconst rows = $input.all();\n\n// Prepare history\nconst history = rows.map(item => {\n  return {\n    question: item.json.question,\n    answer: item.json.answer,\n    sources: item.json.sources\n  };\n});\n\n// Return payload for FastAPI\nreturn [\n  {\n    json: {\n      question: question,\n      history: history\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        224
+      ],
+      "id": "18ff4999-6cbe-42a8-b761-9e5069ab58db",
+      "name": "Prepare history"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "3HdbS7092x9DSyou",
+          "mode": "list",
+          "cachedResultName": "chat_memory",
+          "cachedResultUrl": "/projects/LPILM4i7RtuLsk0w/datatables/3HdbS7092x9DSyou"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Validate Request').item.json.session_id }}"
+            }
+          ]
+        },
+        "limit": "=const MAX_CHARS = 8000;\n\nlet history = [];\n\nlet size = 0;\n\nfor (const row of items) {\n    const text = `${row.json.question}\\n${row.json.answer}\\n`;\n\n    if (size + text.length > MAX_CHARS) break;\n\n    history.push({\n        question: row.json.question,\n        answer: row.json.answer,\n    });\n\n    size += text.length;\n}\n\nreturn [{\n    json: {\n        history\n    }\n}];",
+        "orderBy": true,
+        "orderByColumn": "session_id"
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        224
+      ],
+      "id": "5f997210-d537-48e9-9e1e-f5881d58a868",
+      "name": "Get row(s) Memory table",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorMessage =\n  $json.errorMessage ||\n  $json.message ||\n  \"Unknown storage error\";\n\nreturn [\n  {\n    json: {\n      timestamp: new Date().toISOString(),\n      component: \"execution_logging\",\n      status: \"error\",\n      error_message: errorMessage,\n      session_id: $json.session_id || \"unknown\",\n      question: $json.question || \"\",\n      latency_ms: $json.latency_ms || null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -160
+      ],
+      "id": "79c91fa2-e7b5-4e22-8970-0276e3d27ef9",
+      "name": "Format Storage Error Logs"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      status: \"warning\",\n      message: \"Answer generated but conversation memory could not be saved\",\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        416
+      ],
+      "id": "ab59f0fa-4e48-46ea-adf3-fa6e82857fb8",
+      "name": "Format Storage Error Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const metadata = items.find(item => item.json.execution_id);\nconst logs = items.filter(item => item.json.component);\n\nconst getStatus = (component) =>\n  logs.find(l => l.json.component === component)?.json.status ?? null;\n\nconst errorMessages = logs\n  .map(l => l.json.error_message)\n  .filter(Boolean)\n  .join(\"; \");\n\nreturn [\n  {\n    json: {\n      session_id: metadata?.json.session_id ?? null,\n      execution_id: metadata?.json.execution_id ?? null,\n\n      webhook: getStatus(\"webhook\"),\n      validation: getStatus(\"validation\"),\n      rag_api: getStatus(\"rag-api\"),\n      memory_table_insertion: getStatus(\"memory table insertion\"),\n\n      error_message: errorMessages || null,\n\n      latency_ms: metadata?.json.latency_ms ?? null,\n\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -160
+      ],
+      "id": "9db2400b-0b15-4a26-b917-5103ca22a314",
+      "name": "Prepare logs for insertion"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1984,
+        -32
+      ],
+      "id": "e907efae-870f-47a8-9005-7386976b2c51",
+      "name": "Summarize answer and log error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Success log webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Check AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Validate Success?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Latency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Success?": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) Memory table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Success log validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Response": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "Check AI Response": {
+      "main": [
+        [
+          {
+            "node": "Insert row Memory table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Success log rag-api",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format AI Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format AI Error": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Calculate Latency": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "Insert row Memory table": {
+      "main": [
+        [
+          {
+            "node": "Summarize answer and log error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Success log Memory table insertion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Storage Error Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row Execution Logs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Format Storage Error Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Success log rag-api": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Success log webhook": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Prepare logs for insertion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success log Memory table insertion": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Success log validation": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Prepare history": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) Memory table": {
+      "main": [
+        [
+          {
+            "node": "Prepare history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Storage Error Logs": {
+      "main": [
+        [
+          {
+            "node": "Summarize answer and log error",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Format Storage Error Memory": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Prepare logs for insertion": {
+      "main": [
+        [
+          {
+            "node": "Insert row Execution Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize answer and log error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1548fc63-98a6-4da3-8831-b51631ce66c9",
+  "meta": {
+    "instanceId": "c451b748eed5f759f5a5792f81c3446ca7a4f3064d0e8bc95fecd598dee2ef60"
+  },
+  "nodeGroups": [],
+  "id": "MwPzT0gQzrRM7p3b",
+  "tags": []
+}
