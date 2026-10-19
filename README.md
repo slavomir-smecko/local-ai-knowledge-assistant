@@ -276,9 +276,40 @@ If a different model is configured, download that model instead. Ensure the conf
 
 ### 4. Prepare the knowledge base
 
-The API expects an existing ChromaDB collection. If a prepared vector database is not available, create it from the source documents before starting the application.
+Before starting the application for the first time, create the vector database from your source documents. The application searches this database when answering questions.
 
-Create a Python virtual environment and install the dependencies:
+#### 4.1 Add your documents
+
+Place your documents inside the `documents/` directory in the project. You can organise them into subdirectories by topic or source.
+
+For example:
+
+```text
+rag-assistant/
+├── documents/
+│   ├── knowledge/
+│   │   ├── n8n_webhooks.md
+│   │   └── api_documentation.md
+│   ├── pdf/
+│   │   └── user_guide.pdf
+│   └── external/
+├── ingestion/
+├── vector_db/
+└── config.py
+```
+
+The ingestion pipeline supports these file formats:
+
+* **Markdown (`.md`)** — UTF-8 encoded text files containing documentation, notes, or other written content.
+* **PDF (`.pdf`)** — PDF documents from which the application can extract text.
+
+The application searches the `documents/` directory and its subdirectories for these file types. Other file formats are not currently processed by the ingestion pipeline.
+
+PDF ingestion extracts text from individual pages. Scanned PDFs that contain only images may require OCR before their content can be indexed.
+
+#### 4.2 Install ingestion dependencies
+
+Run the following commands from the project root directory:
 
 ```bash
 python3 -m venv .venv
@@ -286,15 +317,33 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Then, from the repository root, run the ingestion entry point:
+#### 4.3 Build the vector database
+
+From the project root directory, run:
 
 ```bash
 python -m ingestion.build_vector_db
 ```
 
-**Important:** This script rebuilds the vector database collection. Run it intentionally when creating or updating the knowledge base, not for each question. Back up any data that needs to be preserved before rebuilding.
+The script performs the following operations:
 
-The ingestion process must be able to access the configured source documents and download or load the required embedding model.
+1. Loads the configured Sentence Transformers embedding model.
+2. Finds and reads the supported documents.
+3. Splits the extracted text into chunks using the configured chunk size and overlap.
+4. Generates an embedding vector for each chunk.
+5. Stores the text chunks, embeddings, and metadata in ChromaDB.
+
+The generated database is stored in the directory configured by `VECTOR_DB_PATH` in `config.py`. The collection name is configured by `COLLECTION_NAME`.
+
+Wait for the command to finish successfully before starting or testing the application. If no supported documents are found, the script raises an error.
+
+#### 4.4 Update the knowledge base
+
+Run the build command whenever you need to create or rebuild the knowledge base after adding, removing, or updating source documents.
+
+**Warning:** The script deletes and recreates the existing ChromaDB collection. This replaces the previously indexed data rather than updating it incrementally. Ensure that any data you need to preserve is backed up before rebuilding.
+
+The ingestion process requires access to the configured source documents and the embedding model.
 
 ### 5. Start the services
 
