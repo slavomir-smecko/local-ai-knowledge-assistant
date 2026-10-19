@@ -22,6 +22,14 @@ The assistant retrieves relevant document passages and supplies them as context 
 - API and workflow execution logging for troubleshooting.
 - Environment-based configuration for model settings, retrieval parameters, and service ports.
 
+## Platform compatibility
+
+The project was developed and tested on Linux Mint using Docker Compose.
+
+The application uses technologies that are available on both Linux and Windows. Windows users can use Docker Desktop with the WSL 2 backend and install Ollama natively on Windows.
+
+**Note:** The installation procedure has not yet been verified end to end on Windows. Windows-specific setup instructions and configuration may be required, particularly for Python virtual environments, Docker networking, and document ingestion.
+
 ## Demo
 
 The `screenshots/` directory contains visual examples of the application and its components.
